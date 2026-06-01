@@ -292,7 +292,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-[#0a0a0f]">
+    <div className="flex flex-col bg-[#0a0a0f]" style={{ height: "100dvh" }}>
       <Header />
 
       {/* Agent Pipeline Visualization */}

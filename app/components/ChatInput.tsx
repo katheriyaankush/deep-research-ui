@@ -112,6 +112,7 @@ export default function ChatInput({
             disabled={disabled || isExhausted}
             rows={1}
             className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none disabled:opacity-50"
+            style={{ fontSize: "16px" }}
           />
           <button
             type="submit"
