@@ -1,11 +1,143 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 
+type WebViewType = "linkedin" | "facebook" | "instagram" | "other" | null;
+
+function detectWebView(): WebViewType {
+  if (typeof window === "undefined") return null;
+  const ua = navigator.userAgent || "";
+
+  if (/LinkedInApp/i.test(ua)) return "linkedin";
+  if (/FBAN|FBAV|FB_IAB|FB4A|FBIOS/i.test(ua)) return "facebook";
+  if (/Instagram/i.test(ua)) return "instagram";
+
+  // Generic WebView detection (covers most in-app browsers)
+  if (
+    /wv\b/.test(ua) ||
+    (/Android/i.test(ua) && !/Chrome/i.test(ua)) ||
+    (/iPhone|iPad/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari/i.test(ua))
+  ) {
+    return "other";
+  }
+
+  return null;
+}
+
+function isAndroid() {
+  return /android/i.test(navigator.userAgent);
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+function WebViewBlocker({ type }: { type: WebViewType }) {
+  const currentUrl = typeof window !== "undefined" ? window.location.href : "";
+
+  useEffect(() => {
+    if (!isAndroid()) return;
+    // Try to force-open Chrome on Android via intent URI
+    const stripped = currentUrl.replace(/^https?:\/\//, "");
+    window.location.href = `intent://${stripped}#Intent;scheme=https;package=com.android.chrome;end;`;
+  }, [currentUrl]);
+
+  const appName =
+    type === "linkedin" ? "LinkedIn"
+    : type === "facebook" ? "Facebook"
+    : type === "instagram" ? "Instagram"
+    : "this app";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 px-5">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-7 shadow-2xl text-center space-y-5">
+
+        {/* Icon */}
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
+          <svg className="h-7 w-7 text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+        </div>
+
+        <div className="space-y-1.5">
+          <h2 className="text-lg font-bold text-white">Open in your browser</h2>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Google blocks sign-in inside the {appName} browser to protect your account. You need to open this in Chrome or Safari.
+          </p>
+        </div>
+
+        {/* Instructions */}
+        <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-3 text-left">
+          {isAndroid() && (
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">🤖</span>
+              <div className="text-xs text-slate-300 leading-relaxed">
+                <span className="font-semibold text-white">Android:</span> Chrome should open automatically. If not, tap the{" "}
+                <span className="font-semibold text-white">⋮ menu</span> (top right) and select{" "}
+                <span className="font-semibold text-white">"Open in browser"</span>.
+              </div>
+            </div>
+          )}
+
+          {isIOS() && (
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">🍏</span>
+              <div className="text-xs text-slate-300 leading-relaxed">
+                <span className="font-semibold text-white">iPhone/iPad:</span> Tap the{" "}
+                <span className="font-semibold text-white">Safari icon</span> or{" "}
+                <span className="font-semibold text-white">⋯ menu</span> at the bottom of the screen and choose{" "}
+                <span className="font-semibold text-white">"Open in Safari"</span>.
+              </div>
+            </div>
+          )}
+
+          {!isAndroid() && !isIOS() && (
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">🌐</span>
+              <div className="text-xs text-slate-300 leading-relaxed">
+                Copy the link and paste it into <span className="font-semibold text-white">Chrome</span> or your default browser.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Copy URL button */}
+        <button
+          onClick={() => navigator.clipboard?.writeText(currentUrl)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-slate-700 cursor-pointer"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+          </svg>
+          Copy link to open in browser
+        </button>
+
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
+  const [webViewType, setWebViewType] = useState<WebViewType>(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    setWebViewType(detectWebView());
+    setChecked(true);
+  }, []);
+
+  // Don't render until we've checked (avoids hydration mismatch)
+  if (!checked) return null;
+
+  if (webViewType) {
+    return <WebViewBlocker type={webViewType} />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-white/5 p-10 backdrop-blur-xl border border-white/10 shadow-2xl">
+
         {/* Logo / Brand */}
         <div className="text-center space-y-2">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 shadow-lg shadow-purple-500/25">
